@@ -1,28 +1,19 @@
-/*
- UDPSendReceiveString:
- This sketch receives UDP message strings, prints them to the serial port
- and sends an "acknowledge" string back to the sender
-
- A Processing sketch is included at the end of file that can be used to send
- and received messages for testing with a computer.
-
- created 21 Aug 2010
- by Michael Margolis
-
- This code is in the public domain.
- */
-
-
-#include <SPI.h>         // needed for Arduino versions later than 0018
+// Ethernet stuff
+#include <SPI.h> // needed for Arduino versions later than 0018
 #include <Ethernet.h>
 
-#define UDP_TX_PACKET_MAX_SIZE 90 //increase UDP size (default is 24)
+#define UDP_TX_PACKET_MAX_SIZE 90 // Increase UDP size to fit our payload (default is 24)
 
-#include <EthernetUdp.h>         // UDP library from: bjoern@cs.stanford.edu 12/30/2008
+#include <EthernetUdp.h> // UDP library from: bjoern@cs.stanford.edu 12/30/2008
 
+// LED stuff
+#include "FastLED.h"
+#define NUM_LEDS 69
+#define DATA_PIN 6
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
+CRGB leds[NUM_LEDS];
+
+// MAC address of ethernet board
 byte mac[] = {
   0x90, 0xA2, 0xDA, 0x0D, 0x0F, 0xB3
 };
@@ -32,16 +23,23 @@ char startMessage[] = "start";
 
 unsigned int localPort = 64000; // local port to listen on
 
-
 // An EthernetUDP instance to let us send and receive packets over UDP
 EthernetUDP Udp;
 
 void setup() {
-    // start the Ethernet and UDP:
+    //== LED setup
+    // Sanity check delay - allows reprogramming if accidently blowing power w/leds
+    delay(2000);
+
+    FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
+    FastLED.show();
+
+    //== Ethernet setup
+    // Start the Ethernet and UDP:
     Ethernet.begin(mac, ip);
     Udp.begin(localPort);
 
-    // send a reply to the IP address and port that sent us the packet we received
+    // Send start message to server
     Udp.beginPacket(server, 64001);
     Udp.write(startMessage);
     Udp.endPacket();
@@ -53,7 +51,6 @@ void setup() {
 void loop() {
     char packetBuffer[UDP_TX_PACKET_MAX_SIZE]; //buffer to hold incoming packet,
     
-    
     // if there's data available, read a packet
     int packetSize = Udp.parsePacket();
     if (packetSize) {
@@ -64,6 +61,9 @@ void loop() {
       Udp.read(packetBuffer, UDP_TX_PACKET_MAX_SIZE);
       Serial.println("Contents:");
       //Serial.println(packetBuffer);
+
+      // Payload example:
+      // /0:R070G045B028/1:R068G046B031/2:R066G044B029/3:R064G039B030/4:R064G040B028/5:R070G048B031
 
       readArea(packetBuffer, 0);
       readArea(packetBuffer, 1);
@@ -77,14 +77,31 @@ void loop() {
 }
 
 void readArea(char *packetBuffer, int areaNum) {
+  unsigned int charPos = areaNum * 15;
+  //unsigned int ledPos = areaNum * 15;
+
+/*
+
+       LEDs |   8        15         8
+      ----- -----------------------------
+            |       |           |       |
+        9   |   0   |     2     |   4   |   50%
+            |       |           |       |
+      ----- -----------------------------
+            |       |           |       |
+        9   |   1   |     3     |   5   |   50%
+      (+1)  |       |           |       |
+      ----- -----------------------------
+            |  20%  |    40%    |  20%  | Ratio
+*/
   Serial.print("Area #");
-  Serial.print(packetBuffer[areaNum * 15 + 1]);
+  Serial.print(packetBuffer[charPos + 1]);
   Serial.println(":");
   
   Serial.println("Red:");
-  Serial.print(packetBuffer[areaNum * 15 + 4]);
-  Serial.print(packetBuffer[areaNum * 15 + 5]);
-  Serial.println(packetBuffer[areaNum * 15 + 6]);
+  Serial.print(packetBuffer[charPos + 4]);
+  Serial.print(packetBuffer[charPos + 5]);
+  Serial.println(packetBuffer[charPos + 6]);
 }
 
 
