@@ -45,7 +45,6 @@ void setup() {
     Udp.endPacket();
     
     Serial.begin(9600);
-    Serial.println(UDP_TX_PACKET_MAX_SIZE);
 }
 
 void loop() {
@@ -54,13 +53,8 @@ void loop() {
     // if there's data available, read a packet
     int packetSize = Udp.parsePacket();
     if (packetSize) {
-      Serial.print("Received packet of size ");
-      Serial.println(packetSize);
-  
       // read the packet into packetBufffer
       Udp.read(packetBuffer, UDP_TX_PACKET_MAX_SIZE);
-      Serial.println("Contents:");
-      //Serial.println(packetBuffer);
 
       // Payload example:
       // /0:R070G045B028/1:R068G046B031/2:R066G044B029/3:R064G039B030/4:R064G040B028/5:R070G048B031
@@ -68,13 +62,13 @@ void loop() {
       processArea(packetBuffer, 0);
       processArea(packetBuffer, 1);
       processArea(packetBuffer, 2);
-      // processArea(packetBuffer, 3);
+      // processArea(packetBuffer, 3); // we don't have LEDs for that part of the screen (yet)
       processArea(packetBuffer, 4);
       processArea(packetBuffer, 5);
 
       FastLED.show();
     }
-    delay(100);
+    delay(10);
 }
 
 void processArea(char *packetBuffer, int areaNum) {
@@ -122,21 +116,12 @@ void processArea(char *packetBuffer, int areaNum) {
         return;
     }
 
-    // Serial.print("Area #");
-    // Serial.print(packetBuffer[charPos + 1]);
-    // Serial.println(":");
-
-    charPos += 2; // "/3"
+    charPos += 4; // "/5:R"
     int red = getColorFromMessage(packetBuffer, charPos);
-    charPos += 3; // "255"
+    charPos += 4; // "255G"
     int green = getColorFromMessage(packetBuffer, charPos);
-    charPos += 3; // "255"
+    charPos += 4; // "255B"
     int blue = getColorFromMessage(packetBuffer, charPos);
-
-    // Serial.println("Red:");
-    // Serial.print(packetBuffer[charPos + 4]);
-    // Serial.print(packetBuffer[charPos + 5]);
-    // Serial.println(packetBuffer[charPos + 6]);
 
     CRGB rgb = CRGB(red, green, blue);
     for(unsigned int i=0; i<ledCnt; i++){
@@ -146,9 +131,9 @@ void processArea(char *packetBuffer, int areaNum) {
 
 int getColorFromMessage(char *packetBuffer, int charPos) {
     char buffer[4];
-    buffer[0] = packetBuffer[charPos + 4];
-    buffer[1] = packetBuffer[charPos + 5];
-    buffer[2] = packetBuffer[charPos + 6];
+    buffer[0] = packetBuffer[charPos];
+    buffer[1] = packetBuffer[charPos + 1];
+    buffer[2] = packetBuffer[charPos + 2];
     buffer[3] = '\0';
 
     return atoi(buffer);
