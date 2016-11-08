@@ -31,7 +31,7 @@ void setup() {
     // Sanity check delay - allows reprogramming if accidently blowing power w/leds
     delay(2000);
 
-    FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
+    FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
     FastLED.show();
 
     //== Ethernet setup
