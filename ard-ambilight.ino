@@ -2,7 +2,7 @@
 #include <SPI.h> // needed for Arduino versions later than 0018
 #include <Ethernet.h>
 
-#define UDP_TX_PACKET_MAX_SIZE 90 // Increase UDP size to fit our payload (default is 24)
+#define UDP_TX_PACKET_MAX_SIZE 90 // Increase UDP packet size to fit our payload (default is 24)
 
 #include <EthernetUdp.h> // UDP library from: bjoern@cs.stanford.edu 12/30/2008
 
@@ -65,43 +65,93 @@ void loop() {
       // Payload example:
       // /0:R070G045B028/1:R068G046B031/2:R066G044B029/3:R064G039B030/4:R064G040B028/5:R070G048B031
 
-      readArea(packetBuffer, 0);
-      readArea(packetBuffer, 1);
-      readArea(packetBuffer, 2);
-      readArea(packetBuffer, 3);
-      readArea(packetBuffer, 4);
-      readArea(packetBuffer, 5);
+      processArea(packetBuffer, 0);
+      processArea(packetBuffer, 1);
+      processArea(packetBuffer, 2);
+      // processArea(packetBuffer, 3);
+      processArea(packetBuffer, 4);
+      processArea(packetBuffer, 5);
 
+      FastLED.show();
     }
-    delay(10);
+    delay(100);
 }
 
-void readArea(char *packetBuffer, int areaNum) {
-  unsigned int charPos = areaNum * 15;
-  //unsigned int ledPos = areaNum * 15;
+void processArea(char *packetBuffer, int areaNum) {
+    unsigned int charPos = areaNum * 15;
 
-/*
+    /*
+           LEDs |   8        15         8
+          ----- -----------------------------
+                |       |           |       |
+            9   |   0   |     2     |   4   |   50%
+                |       |           |       |
+          ----- -----------------------------
+                |       |           |       |
+            9   |   1   |     3     |   5   |   50%
+          (+1)  |       |           |       |
+          ----- -----------------------------
+                |  20%  |    40%    |  20%  | Ratio
+    */
+    unsigned int ledStartPos;
+    unsigned int ledCnt;
 
-       LEDs |   8        15         8
-      ----- -----------------------------
-            |       |           |       |
-        9   |   0   |     2     |   4   |   50%
-            |       |           |       |
-      ----- -----------------------------
-            |       |           |       |
-        9   |   1   |     3     |   5   |   50%
-      (+1)  |       |           |       |
-      ----- -----------------------------
-            |  20%  |    40%    |  20%  | Ratio
-*/
-  Serial.print("Area #");
-  Serial.print(packetBuffer[charPos + 1]);
-  Serial.println(":");
-  
-  Serial.println("Red:");
-  Serial.print(packetBuffer[charPos + 4]);
-  Serial.print(packetBuffer[charPos + 5]);
-  Serial.println(packetBuffer[charPos + 6]);
+    switch (areaNum) {
+    case 0:
+        ledStartPos = 11;
+        ledCnt = 17;
+        break;
+    case 1:
+        ledStartPos = 1; // or 0
+        ledCnt = 9; // or 10
+        break;
+    case 2:
+        ledStartPos = 28;
+        ledCnt = 15;
+        break;
+    case 4:
+        ledStartPos = 43;
+        ledCnt = 17;
+        break;
+    case 5:
+        ledStartPos = 61;
+        ledCnt = 9;
+        break;
+    default:
+        // Nothing to do
+        return;
+    }
+
+    // Serial.print("Area #");
+    // Serial.print(packetBuffer[charPos + 1]);
+    // Serial.println(":");
+
+    charPos += 2; // "/3"
+    int red = getColorFromMessage(packetBuffer, charPos);
+    charPos += 3; // "255"
+    int green = getColorFromMessage(packetBuffer, charPos);
+    charPos += 3; // "255"
+    int blue = getColorFromMessage(packetBuffer, charPos);
+
+    // Serial.println("Red:");
+    // Serial.print(packetBuffer[charPos + 4]);
+    // Serial.print(packetBuffer[charPos + 5]);
+    // Serial.println(packetBuffer[charPos + 6]);
+
+    CRGB rgb = CRGB(red, green, blue);
+    for(unsigned int i=0; i<ledCnt; i++){
+        leds[ledStartPos + i] = rgb;
+    }
+}
+
+int getColorFromMessage(char *packetBuffer, int charPos) {
+    char buffer[4];
+    buffer[0] = packetBuffer[charPos + 4];
+    buffer[1] = packetBuffer[charPos + 5];
+    buffer[2] = packetBuffer[charPos + 6];
+    buffer[3] = '\0';
+
+    return atoi(buffer);
 }
 
 
