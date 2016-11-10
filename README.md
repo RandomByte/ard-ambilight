@@ -1,2 +1,4 @@
 # ard-ambilight
 Arduino side of my ambilight project
+
+`echo -n "/0:R070G045B028/1:R068G046B031/2:R066G044B029/3:R064G039B030/4:R064G040B028/5:R070G048B031" | nc -4u -w1 192.168.2.23 64000`
